@@ -1,139 +1,291 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Lucky 777 Multiplayer</title>
-    <style>
-        :root { --gold: linear-gradient(to bottom, #bf953f, #fcf6ba, #b38728); }
-        body { background: radial-gradient(circle, #2a0044, #000); color: white; font-family: sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        #auth-container { background: #222; padding: 30px; border-radius: 15px; border: 2px solid gold; text-align: center; }
-        input { display: block; width: 220px; margin: 10px auto; padding: 10px; border-radius: 5px; border: none; }
-        button { background: var(--gold); border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; border-radius: 5px; }
-        #game-ui { display: none; width: 900px; }
-        .grid { display: grid; grid-template-columns: 200px 1fr 250px; gap: 20px; }
-        .panel { background: rgba(0,0,0,0.6); padding: 15px; border-radius: 10px; border: 1px solid #444; }
-        .reels { display: flex; gap: 10px; background: #fff; padding: 15px; border-radius: 10px; margin: 20px 0; }
-        .reel { flex: 1; height: 100px; font-size: 60px; line-height: 100px; text-align: center; color: #000; background: #eee; border-radius: 5px; }
-        .leaderboard-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #333; }
-        .win-msg { color: #0f0; font-weight: bold; height: 30px; font-size: 1.5em; }
-    </style>
+<meta charset="UTF-8">
+<title>Lucky 777 Multiplayer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+:root {
+    --gold: linear-gradient(to bottom, #bf953f, #fcf6ba, #b38728);
+}
+body {
+    margin: 0;
+    min-height: 100vh;
+    background: radial-gradient(circle, #1a0033, #000);
+    color: white;
+    font-family: Segoe UI, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+button {
+    background: var(--gold);
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+input {
+    width: 250px;
+    padding: 10px;
+    margin: 8px 0;
+    border-radius: 6px;
+    border: none;
+}
+
+#auth, #game {
+    background: rgba(0,0,0,0.75);
+    padding: 30px;
+    border-radius: 15px;
+    border: 2px solid gold;
+}
+
+#game { 
+    display: none; 
+    width: 1000px; 
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: 200px 1fr 250px;
+    gap: 20px;
+}
+
+.reels {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+}
+
+.reel {
+    width: 100px;
+    height: 120px;
+    font-size: 70px;
+    line-height: 120px;
+    background: white;
+    color: black;
+    border-radius: 10px;
+    text-align: center;
+}
+
+.leader-item {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px solid #333;
+    padding: 6px;
+}
+
+#balance {
+    font-size: 48px;
+    color: gold;
+}
+
+.win {
+    color: #0f0;
+    font-size: 22px;
+    height: 30px;
+}
+</style>
 </head>
+
 <body>
 
-    <div id="auth-container">
-        <h1 style="color:gold;">LUCKY 777</h1>
-        <input type="text" id="username" placeholder="Username">
-        <input type="password" id="password" placeholder="Password">
-        <button onclick="handleAuth('login')">Login</button>
-        <button onclick="handleAuth('signup')">Sign Up</button>
-        <p id="auth-msg" style="color:red;"></p>
+<!-- ================= AUTH ================= -->
+<div id="auth">
+    <h1 style="color:gold">LUCKY 777</h1>
+    <input id="username" placeholder="Username">
+    <input id="password" type="password" placeholder="Password">
+    <button onclick="auth('login')">Login</button>
+    <button onclick="auth('signup')" style="margin-top:10px;background:none;color:gold;border:1px solid gold;">
+        Sign Up
+    </button>
+    <p id="auth-msg" style="color:red"></p>
+</div>
+
+<!-- ================= GAME ================= -->
+<div id="game">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+        <h2>Welcome <span id="player" style="color:gold"></span></h2>
+        <button onclick="logout()" style="background:red;color:white">Logout</button>
     </div>
 
-    <div id="game-ui">
-        <div style="display:flex; justify-content: space-between; border-bottom: 2px solid gold; margin-bottom: 20px;">
-            <h2>Player: <span id="display-name" style="color:gold;"></span></h2>
-            <button onclick="logout()" style="background:red; color:white; margin: 15px;">Logout</button>
+    <div class="grid">
+
+        <!-- LEFT PANEL -->
+        <div>
+            <h3 style="color:gold">Controls</h3>
+            <p>Spin Cost: 10</p>
+            <button onclick="spin()" style="width:100%;font-size:22px">SPIN</button>
+            <button onclick="joinMatch()" style="width:100%;margin-top:10px">
+                🎮 PLAY 1v1
+            </button>
+            <p id="match-msg"></p>
         </div>
 
-        <div class="grid">
-            <div class="panel">
-                <h3 style="color:gold;">Payouts</h3>
-                <p>777: 500 pts<br>💎💎💎: 200 pts<br>Any 2x: 20 pts</p>
-                <hr>
-                <p>Spin: 10 pts</p>
+        <!-- CENTER -->
+        <div style="text-align:center">
+            <div id="balance">0</div>
+            <div>POINTS</div>
+
+            <div class="reels">
+                <div class="reel" id="r1">7️⃣</div>
+                <div class="reel" id="r2">7️⃣</div>
+                <div class="reel" id="r3">7️⃣</div>
             </div>
 
-            <div style="text-align:center;">
-                <h1 style="font-size: 3em; color: gold; margin: 0;"><span id="balance-amt">0</span> <small style="font-size: 0.3em;">PTS</small></h1>
-                <div class="panel" style="background: #444; border: 4px solid gold;">
-                    <div class="reels">
-                        <div class="reel" id="r1">?</div>
-                        <div class="reel" id="r2">?</div>
-                        <div class="reel" id="r3">?</div>
-                    </div>
-                </div>
-                <div id="win-msg" class="win-msg"></div>
-                <button id="spin-btn" style="width: 100%; font-size: 2em; margin-top: 10px;" onclick="spin()">SPIN!</button>
-            </div>
-
-            <div class="panel">
-                <h3 style="color:gold;">Global Rankings</h3>
-                <div id="leaderboard-list">Loading...</div>
-            </div>
+            <div class="win" id="win-msg"></div>
         </div>
+
+        <!-- RIGHT PANEL -->
+        <div>
+            <h3 style="color:gold">Leaderboard</h3>
+            <div id="leaderboard">Loading...</div>
+        </div>
+
     </div>
+</div>
 
-    <script>
-        async function handleAuth(type) {
-            const u = document.getElementById('username').value;
-            const p = document.getElementById('password').value;
-            const res = await fetch(`/api/auth/${type}`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({username: u, password: p})
-            });
-            const data = await res.json();
-            if (data.error) document.getElementById('auth-msg').innerText = data.error;
-            else if (type === 'login') showGame(data.user);
-            else alert("Account created! Log in now.");
+<script>
+let balance = 0;
+let matchId = null;
+
+// ================= AUTH =================
+async function auth(type) {
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+    const authMsg = document.getElementById('auth-msg');
+    
+    const u = usernameInput.value;
+    const p = passwordInput.value;
+    
+    try {
+        const res = await fetch(`/api/auth/${type}`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({username: u, password: p})
+        });
+        const data = await res.json();
+        
+        if (data.error) {
+            authMsg.innerText = data.error;
+        } else if (type === 'login' && data.user) {
+            startGame(data.user);
+        }
+    } catch (error) {
+        authMsg.innerText = 'Connection error';
+    }
+}
+
+function startGame(user) {
+    document.getElementById('auth').style.display = "none";
+    document.getElementById('game').style.display = "block";
+    document.getElementById('player').innerText = user.username;
+    balance = user.balance;
+    balanceUI();
+    loadLeaderboard();
+    setInterval(loadLeaderboard, 8000);
+}
+
+function logout() {
+    fetch('/api/auth/logout')
+        .then(() => location.reload())
+        .catch(() => location.reload());
+}
+
+// ================= GAME =================
+async function spin() {
+    if (balance < 10) {
+        alert("No points");
+        return;
+    }
+    
+    try {
+        const res = await fetch('/api/game/spin', {method: 'POST'});
+        const data = await res.json();
+        
+        if (data.error) {
+            alert(data.error);
+            return;
         }
 
-        function showGame(user) {
-            document.getElementById('auth-container').style.display = 'none';
-            document.getElementById('game-ui').style.display = 'block';
-            document.getElementById('display-name').innerText = user.username;
-            document.getElementById('balance-amt').innerText = user.balance;
-            updateLeaderboard();
-            setInterval(updateLeaderboard, 5000);
+        document.getElementById('r1').innerText = data.reels[0];
+        document.getElementById('r2').innerText = data.reels[1];
+        document.getElementById('r3').innerText = data.reels[2];
+        balance = data.new_balance;
+        balanceUI();
+
+        const winMsg = document.getElementById('win-msg');
+        winMsg.innerText = data.reward > 0 ? `WIN +${data.reward}` : "";
+        loadLeaderboard();
+    } catch (error) {
+        alert('Spin error');
+    }
+}
+
+function balanceUI() {
+    document.getElementById('balance').innerText = balance;
+}
+
+// ================= MULTIPLAYER =================
+async function joinMatch() {
+    const matchMsg = document.getElementById('match-msg');
+    matchMsg.innerText = "Searching opponent...";
+    
+    try {
+        const res = await fetch('/api/match/join', {method: 'POST'});
+        const data = await res.json();
+
+        if (data.status === "waiting") {
+            pollMatch();
+        } else {
+            matchId = data.match_id;
+            matchMsg.innerText = "Opponent found! Spin!";
         }
+    } catch (error) {
+        matchMsg.innerText = "Error finding match";
+    }
+}
 
-        async function updateLeaderboard() {
-            const res = await fetch('/api/leaderboard');
+function pollMatch() {
+    setTimeout(async () => {
+        try {
+            const res = await fetch('/api/match/join', {method: 'POST'});
             const data = await res.json();
-            const list = document.getElementById('leaderboard-list');
-            list.innerHTML = data.map((u, i) => `
-                <div class="leaderboard-item">
-                    <span>${i + 1}. ${u.username}</span>
-                    <span style="color:gold; font-weight:bold;">${u.balance}</span>
-                </div>
-            `).join('');
-        }
-
-        async function spin() {
-            const btn = document.getElementById('spin-btn');
-            btn.disabled = true;
-            document.getElementById('win-msg').innerText = "";
-
-            const res = await fetch('/api/game/spin', {method: 'POST'});
-            const data = await res.json();
-
-            if (data.error) {
-                alert(data.error);
-                btn.disabled = false;
-                return;
+            
+            if (data.match_id) {
+                matchId = data.match_id;
+                document.getElementById('match-msg').innerText = "Opponent joined!";
+            } else {
+                pollMatch();
             }
-
-            // Simple animation
-            let count = 0;
-            let timer = setInterval(() => {
-                const syms = ['7️⃣', '🍒', '💎', '🔔', '🍋', '🍇'];
-                document.getElementById('r1').innerText = syms[Math.floor(Math.random()*6)];
-                document.getElementById('r2').innerText = syms[Math.floor(Math.random()*6)];
-                document.getElementById('r3').innerText = syms[Math.floor(Math.random()*6)];
-                if(count++ > 12) {
-                    clearInterval(timer);
-                    document.getElementById('r1').innerText = data.reels[0];
-                    document.getElementById('r2').innerText = data.reels[1];
-                    document.getElementById('r3').innerText = data.reels[2];
-                    document.getElementById('balance-amt').innerText = data.new_balance;
-                    if(data.is_win) document.getElementById('win-msg').innerText = `WIN! +${data.reward}`;
-                    btn.disabled = false;
-                    updateLeaderboard();
-                }
-            }, 80);
+        } catch (error) {
+            document.getElementById('match-msg').innerText = "Connection error";
         }
+    }, 3000);
+}
 
-        function logout() { fetch('/api/auth/logout').then(() => location.reload()); }
-    </script>
+// ================= LEADERBOARD =================
+async function loadLeaderboard() {
+    try {
+        const res = await fetch('/api/leaderboard');
+        const data = await res.json();
+        const leaderboard = document.getElementById('leaderboard');
+        
+        leaderboard.innerHTML = data.map((u, i) => `
+            <div class="leader-item">
+                <span>${i + 1}. ${u.username}</span>
+                <span style="color:gold">${u.balance}</span>
+            </div>
+        `).join('');
+    } catch (error) {
+        document.getElementById('leaderboard').innerHTML = 'Loading...';
+    }
+}
+</script>
+
 </body>
 </html>
