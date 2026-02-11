@@ -23,23 +23,19 @@ users_col = db["users"]
 queue_col = db["match_queue"]
 matches_col = db["matches"]
 
-# ================= GAME CONFIG =================
 SYMBOLS = ['7️⃣', '💎', '🔔', '🍒', '🍋', '🍇']
 PAYOUTS = {'7️⃣': 100, '💎': 50, '🔔': 30, '🍒': 20, '🍋': 10, '🍇': 5}
-SPIN_COST = 0 
-MAX_SPINS_PER_PLAYER = 5
+MAX_ROUNDS = 5 # 5 turns each
 
 def get_current_user():
     if "user_id" in session:
         try:
             return users_col.find_one({"_id": ObjectId(session["user_id"])})
-        except:
-            return None
+        except: return None
     return None
 
 @app.route('/')
 def index():
-    session.permanent = True
     return render_template('index.html')
 
 # ================= AUTH =================
@@ -48,200 +44,114 @@ def signup():
     data = request.json
     if users_col.find_one({"username": data["username"]}):
         return jsonify({"error": "Username taken"}), 400
-    users_col.insert_one({
+    user_id = users_col.insert_one({
         "username": data["username"],
         "password": generate_password_hash(data["password"]),
         "balance": 1000
-    })
-    return jsonify({"message": "Success", "user": {"username": data["username"], "balance": 1000}})
+    }).inserted_id
+    session["user_id"] = str(user_id)
+    return jsonify({"user": {"username": data["username"], "balance": 1000}})
 
 @app.route('/api/auth/login', methods=['POST'])
 def login():
     data = request.json
     user = users_col.find_one({"username": data["username"]})
     if user and check_password_hash(user["password"], data["password"]):
-        session.permanent = True 
         session["user_id"] = str(user["_id"])
         return jsonify({"user": {"username": user["username"], "balance": user["balance"]}})
     return jsonify({"error": "Invalid login"}), 401
 
-@app.route('/api/auth/check', methods=['GET'])
-def check_session():
-    user = get_current_user()
-    if user:
-        return jsonify({"logged_in": True, "user": {"username": user["username"], "balance": user["balance"]}})
-    return jsonify({"logged_in": False})
+@app.route('/api/auth/check')
+def check():
+    u = get_current_user()
+    return jsonify({"logged_in": u is not None, "user": {"username": u["username"], "balance": u["balance"]} if u else None})
 
 @app.route('/api/auth/logout', methods=['POST'])
 def logout():
     session.clear()
     return jsonify({"success": True})
 
-# ================= ADMIN =================
-@app.route('/api/admin/login', methods=['POST'])
-def admin_login():
-    data = request.json
-    if data.get("password") == "admin123":
-        session["admin_access"] = True
-        return jsonify({"success": True})
-    return jsonify({"error": "Invalid password"}), 401
+# ================= MULTIPLAYER LOGIC =================
 
-@app.route('/api/admin/alter-balance', methods=['POST'])
-def alter_balance():
-    if not session.get("admin_access"):
-        return jsonify({"error": "Admin required"}), 403
-    data = request.json
-    user = users_col.find_one({"username": data["username"]})
-    if user:
-        users_col.update_one({"_id": user["_id"]}, {"$set": {"balance": int(data["balance"])}})
-        return jsonify({"success": True})
-    return jsonify({"error": "User not found"}), 404
-
-# ================= SINGLE PLAYER =================
-@app.route('/api/game/spin', methods=['POST'])
-def spin():
-    user = get_current_user()
-    if not user or user["balance"] < SPIN_COST:
-        return jsonify({"error": "Insufficient funds"}), 400
-
-    reels = [random.choice(SYMBOLS) for _ in range(3)]
-    reward = 0
-    if reels[0] == reels[1] == reels[2]: 
-        reward = PAYOUTS[reels[0]]
-    elif len(set(reels)) == 2: 
-        reward = 10
-
-    new_balance = user["balance"] - SPIN_COST + reward
-    users_col.update_one({"_id": user["_id"]}, {"$set": {"balance": new_balance}})
-    return jsonify({"reels": reels, "reward": reward, "new_balance": new_balance})
-
-# ================= MULTIPLAYER =================
 @app.route('/api/match/join', methods=['POST'])
-def join_match():
-    user = get_current_user()
-    if not user: 
-        return jsonify({"error": "Login required"}), 401
-    uid = str(user["_id"])
+def join():
+    u = get_current_user()
+    if not u: return jsonify({"error": "Unauthorized"}), 401
+    uid = str(u["_id"])
 
-    # Clean old queue
     queue_col.delete_many({"timestamp": {"$lt": time.time() - 30}})
-    
-    # Check for waiting opponent
-    opponent = queue_col.find_one({})
-    if opponent and opponent["user_id"] != uid:
-        opp_user = users_col.find_one({"_id": ObjectId(opponent["user_id"])})
-        match_data = {
-            "player1": opponent["user_id"], 
-            "player2": uid,
-            "p1_info": {"username": opponent["username"], "total": 0, "spins_count": 0},
-            "p2_info": {"username": user["username"], "total": 0, "spins_count": 0},
-            "current_turn": "p1",
-            "status": "active",
-            "winner": None,
-            "created_at": time.time()
+    opp = queue_col.find_one({"user_id": {"$ne": uid}})
+
+    if opp:
+        match = {
+            "p1": opp["user_id"], "p2": uid,
+            "p1_name": opp["username"], "p2_name": u["username"],
+            "p1_score": 0, "p2_score": 0,
+            "turn": "p1", "status": "active", "history": [], "winner": None
         }
-        res = matches_col.insert_one(match_data)
-        queue_col.delete_one({"_id": opponent["_id"]})
-        return jsonify({"match_id": str(res.inserted_id)})
+        mid = matches_col.insert_one(match).inserted_id
+        queue_col.delete_one({"_id": opp["_id"]})
+        return jsonify({"match_id": str(mid)})
     else:
-        # Add to queue
-        queue_col.update_one({"user_id": uid}, 
-            {"$set": {"username": user["username"], "timestamp": time.time()}}, 
-            upsert=True)
+        queue_col.update_one({"user_id": uid}, {"$set": {"username": u["username"], "timestamp": time.time()}}, upsert=True)
         return jsonify({"status": "waiting"})
 
-@app.route('/api/match/<match_id>/status')
-def match_status(match_id):
-    user = get_current_user()
-    if not user:
-        return jsonify({"error": "Login required"}), 401
-        
-    try:
-        match = matches_col.find_one({"_id": ObjectId(match_id)})
-        if not match:
-            return jsonify({"error": "Match not found"}), 404
-        
-        is_p1 = str(user["_id"]) == match["player1"]
-        my_key = "p1_info" if is_p1 else "p2_info"
-        opp_key = "p2_info" if is_p1 else "p1_info"
-        
-        is_my_turn = (match["current_turn"] == ("p1" if is_p1 else "p2")) and match["status"] == "active"
-        
-        return jsonify({
-            "status": match["status"],
-            "is_my_turn": is_my_turn,
-            "my_total": match[my_key]["total"],
-            "opp_total": match[opp_key]["total"],
-            "opp_username": match[opp_key]["username"],
-            "winner": match.get("winner", None),  # ✅ FIXED: Use .get() to avoid KeyError
-            "p1_spins": match["p1_info"]["spins_count"],
-            "p2_spins": match["p2_info"]["spins_count"]
-        })
-    except Exception as e:
-        return jsonify({"error": "Match error"}), 500
+@app.route('/api/match/<mid>/status')
+def status(mid):
+    u = get_current_user()
+    m = matches_col.find_one({"_id": ObjectId(mid)})
+    if not m: return jsonify({"error": "No match"}), 404
+    
+    is_p1 = str(u["_id"]) == m["p1"]
+    return jsonify({
+        "status": m["status"],
+        "is_my_turn": (m["turn"] == ("p1" if is_p1 else "p2")),
+        "my_score": m["p1_score"] if is_p1 else m["p2_score"],
+        "opp_score": m["p2_score"] if is_p1 else m["p1_score"],
+        "opp_name": m["p2_name"] if is_p1 else m["p1_name"],
+        "history": m["history"],
+        "winner": m["winner"]
+    })
 
-@app.route('/api/match/<match_id>/spin', methods=['POST'])
-def match_spin(match_id):
-    user = get_current_user()
-    if not user:
-        return jsonify({"error": "Login required"}), 401
-        
-    try:
-        match = matches_col.find_one({"_id": ObjectId(match_id)})
-        if not match or match["status"] != "active":
-            return jsonify({"error": "Match not active"}), 400
+@app.route('/api/match/<mid>/spin', methods=['POST'])
+def match_spin(mid):
+    u = get_current_user()
+    m = matches_col.find_one({"_id": ObjectId(mid)})
+    is_p1 = str(u["_id"]) == m["p1"]
+    role = "p1" if is_p1 else "p2"
 
-        is_p1 = str(user["_id"]) == match["player1"]
-        current_role = "p1" if is_p1 else "p2"
+    if m["turn"] != role or m["status"] != "active": return jsonify({"error": "Wait turn"}), 400
+
+    reels = [random.choice(SYMBOLS) for _ in range(3)]
+    pts = PAYOUTS[reels[0]] if reels[0]==reels[1]==reels[2] else (10 if len(set(reels))==2 else 0)
+
+    # Record history
+    entry = {"player": m[f"{role}_name"], "reels": reels, "points": pts}
+    
+    matches_col.update_one({"_id": ObjectId(mid)}, {
+        "$inc": {f"{role}_score": pts},
+        "$push": {"history": entry},
+        "$set": {"turn": "p2" if is_p1 else "p1"}
+    })
+
+    # Check if game ends
+    m_upd = matches_col.find_one({"_id": ObjectId(mid)})
+    if len(m_upd["history"]) >= (MAX_ROUNDS * 2):
+        win_name = "Draw"
+        if m_upd["p1_score"] > m_upd["p2_score"]: win_name = m_upd["p1_name"]
+        elif m_upd["p2_score"] > m_upd["p1_score"]: win_name = m_upd["p2_name"]
         
-        if match["current_turn"] != current_role:
-            return jsonify({"error": "Not your turn"}), 400
-        
-        # Spin logic
-        reels = [random.choice(SYMBOLS) for _ in range(3)]
-        score = 0
-        if reels[0] == reels[1] == reels[2]:
-            score = PAYOUTS[reels[0]]
-        elif len(set(reels)) == 2:
-            score = 10
-        
-        my_key = "p1_info" if is_p1 else "p2_info"
-        next_turn = "p2" if is_p1 else "p1"
-        
-        # Update match
-        matches_col.update_one({"_id": ObjectId(match_id)}, {
-            "$inc": {f"{my_key}.total": score, f"{my_key}.spins_count": 1},
-            "$set": {"current_turn": next_turn}
-        })
-        
-        # Check if match complete
-        updated_match = matches_col.find_one({"_id": ObjectId(match_id)})
-        if (updated_match["p1_info"]["spins_count"] >= MAX_SPINS_PER_PLAYER and 
-            updated_match["p2_info"]["spins_count"] >= MAX_SPINS_PER_PLAYER):
-            
-            p1_total = updated_match["p1_info"]["total"]
-            p2_total = updated_match["p2_info"]["total"]
-            
-            winner = None
-            if p1_total > p2_total:
-                winner = updated_match["p1_info"]["username"]
-                users_col.update_one({"_id": ObjectId(updated_match["player1"])}, {"$inc": {"balance": 100}})
-            elif p2_total > p1_total:
-                winner = updated_match["p2_info"]["username"]
-                users_col.update_one({"_id": ObjectId(updated_match["player2"])}, {"$inc": {"balance": 100}})
-            
-            matches_col.update_one({"_id": ObjectId(match_id)}, {
-                "$set": {"status": "finished", "winner": winner}
-            })
-        
-        return jsonify({"reels": reels, "score": score, "match_complete": winner is not None})
-    except Exception as e:
-        return jsonify({"error": "Spin error"}), 500
+        matches_col.update_one({"_id": ObjectId(mid)}, {"$set": {"status": "finished", "winner": win_name}})
+        if win_name != "Draw":
+            users_col.update_one({"username": win_name}, {"$inc": {"balance": 100}})
+
+    return jsonify({"reels": reels, "points": pts})
 
 @app.route('/api/leaderboard')
-def leaderboard():
-    users = users_col.find().sort("balance", -1).limit(10)
-    return jsonify([{"username": u["username"], "balance": u["balance"]} for u in users])
+def lead():
+    users = users_col.find().sort("balance", -1).limit(5)
+    return jsonify([{"u": u["username"], "b": u["balance"]} for u in users])
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    # host='0.0.0.0' allows other devices on the same WiFi to connect via your IP
+    app.run(debug=True, host='0.0.0.0', port=5000)
