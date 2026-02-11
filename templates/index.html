@@ -1,322 +1,154 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Lucky 777 Multiplayer</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<style>
-:root {--gold: linear-gradient(to bottom, #bf953f, #fcf6ba, #b38728);}
-body {
-margin: 0; min-height: 100vh; background: radial-gradient(circle, #1a0033, #000);
-color: white; font-family: Segoe UI, sans-serif; display: flex; justify-content: center; align-items: center;
-}
-button {
-background: var(--gold); border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer;
-transition: all 0.3s;
-}
-button:hover:not(:disabled) {transform: scale(1.05);}
-button:disabled {background: #666; cursor: not-allowed;}
-input {width: 250px; padding: 10px; margin: 8px 0; border-radius: 6px; border: none;}
-#auth, #game {background: rgba(0,0,0,0.85); padding: 30px; border-radius: 15px; border: 2px solid gold;}
-#game {display: none; width: 1200px; max-width: 95vw;}
-.grid {display: grid; grid-template-columns: 260px 1fr 280px; gap: 20px;}
-.reels {display: flex; gap: 15px; justify-content: center;}
-.reel {width: 100px; height: 120px; font-size: 70px; line-height: 120px; background: white; color: black; border-radius: 10px; text-align: center; animation: spin 0.5s ease-out;}
-@keyframes spin {0% {transform: rotateY(0deg);} 100% {transform: rotateY(360deg);}}
-.leader-item {display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding: 6px;}
-#balance {font-size: 48px; color: gold;}
-.win {color: #0f0; font-size: 22px; height: 30px;}
-.turn-indicator {background: rgba(255,255,0,0.2); padding: 8px; border-radius: 5px; margin: 10px 0; text-align: center; font-weight: bold;}
-.my-turn {border: 2px solid #0f0; background: rgba(0,255,0,0.2);}
-.opp-turn {border: 2px solid #f00; background: rgba(255,0,0,0.2);}
-.match-btn {width: 100%; padding: 12px; font-size: 16px; margin: 5px 0;}
-.admin-section {background: rgba(255,0,0,0.2); border: 2px solid red; border-radius: 10px; padding: 15px; margin: 15px 0;}
-.admin-btn {background: red !important; color: white; margin: 5px; width: 120px;}
-.status {padding: 8px; border-radius: 5px; margin: 5px 0; text-align: center;}
-.status-waiting {background: rgba(255,165,0,0.3); color: orange;}
-.status-active {background: rgba(0,255,0,0.3); color: #0f0;}
-.status-finished {background: rgba(255,0,255,0.3); color: #f0f;}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1v1 Lucky 777 Battle</title>
+    <style>
+        body { background: #0f001a; color: white; font-family: sans-serif; text-align: center; margin: 0; padding: 20px; }
+        #auth, #game { background: #1a1a1a; border: 2px solid gold; border-radius: 15px; padding: 20px; max-width: 800px; margin: auto; }
+        .reels { display: flex; justify-content: center; gap: 10px; margin: 20px; }
+        .reel { background: white; color: black; font-size: 50px; width: 80px; height: 100px; line-height: 100px; border-radius: 10px; }
+        button { background: linear-gradient(#bf953f, #fcf6ba); border: none; padding: 15px 30px; font-weight: bold; cursor: pointer; border-radius: 5px; margin: 10px; }
+        button:disabled { filter: grayscale(1); cursor: not-allowed; }
+        table { width: 100%; margin-top: 20px; border-collapse: collapse; background: #222; }
+        th, td { border: 1px solid #444; padding: 10px; }
+        .my-turn { border: 3px solid #0f0; box-shadow: 0 0 15px #0f0; }
+        .leaderboard { margin-top: 20px; font-size: 14px; color: #aaa; }
+    </style>
 </head>
 <body>
+
 <div id="auth">
-<h1 style="color:gold">🎰 LUCKY 777 🎰</h1>
-<input id="username" placeholder="Username">
-<input id="password" type="password" placeholder="Password">
-<button onclick="auth('login')">Login</button>
-<button onclick="auth('signup')" style="margin-top:10px;background:none;color:gold;border:1px solid gold;">Sign Up</button>
-<p id="auth-msg" style="color:red"></p>
+    <h2>🎰 1v1 SLOT BATTLE</h2>
+    <input id="u" placeholder="Username" style="padding:10px; width:80%"><br><br>
+    <input id="p" type="password" placeholder="Password" style="padding:10px; width:80%"><br><br>
+    <button onclick="auth('login')">LOGIN</button>
+    <button onclick="auth('signup')">SIGN UP</button>
 </div>
 
-<div id="game">
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-<h2>👋 <span id="player" style="color:gold"></span></h2>
-<button onclick="logout()" style="background:red;color:white">Logout</button>
-<button onclick="toggleAdmin()" id="adminBtn" style="background:orange;color:black;display:none">⚙️ Admin</button>
-</div>
+<div id="game" style="display:none">
+    <div style="display:flex; justify-content: space-between;">
+        <span id="name-tag"></span>
+        <span id="bal-tag" style="color:gold"></span>
+        <button onclick="logout()" style="padding:5px; background:red; color:white">Logout</button>
+    </div>
 
-<!-- ADMIN PANEL -->
-<div id="admin-panel" class="admin-section" style="display:none">
-<h4 style="color:red">🔧 ADMIN PANEL</h4>
-<input id="admin-user" placeholder="Username">
-<input id="admin-balance" type="number" placeholder="Balance">
-<button onclick="adminAlter()" class="admin-btn">💰 Alter</button>
-<div id="admin-msg"></div>
-</div>
+    <div class="reels">
+        <div class="reel" id="r1">?</div>
+        <div class="reel" id="r2">?</div>
+        <div class="reel" id="r3">?</div>
+    </div>
 
-<div class="grid">
-<!-- LEFT -->
-<div>
-<h3 style="color:gold">🎮 CONTROLS</h3>
-<div id="balance-display" style="font-size:24px;color:gold;margin:10px 0">Balance: 0</div>
-<button onclick="singleSpin()" style="width:100%;font-size:22px;height:60px;margin:15px 0" id="singleSpinBtn">🎰 SINGLE SPIN</button>
+    <div id="match-controls">
+        <button id="joinBtn" onclick="joinMatch()">⚔️ FIND 1v1 MATCH</button>
+        <button id="spinBtn" onclick="spin()" style="display:none; font-size:20px">🎰 SPIN NOW!</button>
+    </div>
 
-<h4 style="color:gold">⚔️ 1v1 MATCH</h4>
-<button onclick="joinMatch()" class="match-btn" id="joinBtn">Join Match</button>
-<button onclick="leaveMatch()" class="match-btn" id="leaveBtn" style="display:none;background:red">Leave</button>
-<div id="match-status" class="status" style="display:none"></div>
-<button onclick="matchSpin()" class="match-btn" id="matchSpinBtn" style="display:none">🎰 MATCH SPIN</button>
-</div>
+    <h2 id="status-msg">Welcome! Join a battle.</h2>
 
-<!-- CENTER -->
-<div style="text-align:center">
-<div id="points">0</div>
-<div style="color:gold;font-size:20px">POINTS</div>
-<div class="reels">
-<div class="reel" id="r1">?</div>
-<div class="reel" id="r2">?</div>
-<div class="reel" id="r3">?</div>
-</div>
-<div class="win" id="win-msg"></div>
-<div id="turn-indicator" class="turn-indicator" style="display:none"></div>
-</div>
+    <div id="battle-stats" style="display:none">
+        <div style="display:flex; justify-content: space-around; font-size: 20px; font-weight: bold;">
+            <div style="color:lime">ME: <span id="my-score">0</span></div>
+            <div style="color:orange">OPP (<span id="opp-name"></span>): <span id="opp-score">0</span></div>
+        </div>
 
-<!-- RIGHT -->
-<div>
-<h3 style="color:gold">🏆 LEADERBOARD</h3>
-<div id="leaderboard">Loading...</div>
-<div id="match-info" style="margin-top:20px;display:none">
-<h4 style="color:gold">Match Info</h4>
-<div id="opp-info"></div>
-</div>
-</div>
-</div>
+        <table>
+            <thead><tr><th>Player</th><th>Spin</th><th>Points</th></tr></thead>
+            <tbody id="history-body"></tbody>
+        </table>
+    </div>
+
+    <div class="leaderboard" id="lead"></div>
 </div>
 
 <script>
-let currentUser = null, matchId = null, pollInterval = null;
-let balance = 0, isInMatch = false, isMyTurn = false;
+    let matchId = null;
+    let poll = null;
 
-window.onload = async () => {
-    const res = await fetch('/api/auth/check', {credentials: 'include'});
-    const data = await res.json();
-    if (data.logged_in) {
-        currentUser = data.user;
-        startGame(data.user);
-    }
-};
-
-async function auth(type) {
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
-    
-    try {
+    async function auth(type) {
+        const username = document.getElementById('u').value;
+        const password = document.getElementById('p').value;
         const res = await fetch(`/api/auth/${type}`, {
-            method: 'POST',
-            credentials: 'include',
-            headers: {'Content-Type': 'application/json'},
+            method: 'POST', headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({username, password})
         });
         const data = await res.json();
-        
-        if (data.error) {
-            document.getElementById('auth-msg').textContent = data.error;
-        } else {
-            currentUser = data.user;
-            startGame(data.user);
-        }
-    } catch (e) {
-        document.getElementById('auth-msg').textContent = 'Error';
+        if (data.user) location.reload(); else alert(data.error);
     }
-}
 
-function startGame(user) {
-    document.getElementById('auth').style.display = 'none';
-    document.getElementById('game').style.display = 'block';
-    document.getElementById('player').textContent = user.username;
-    balance = user.balance;
-    updateUI();
-    loadLeaderboard();
-    setInterval(loadLeaderboard, 5000);
-    document.getElementById('adminBtn').style.display = 'inline-block';
-}
-
-function updateUI() {
-    document.getElementById('balance-display').textContent = `Balance: ${balance}`;
-}
-
-async function singleSpin() {
-    const res = await fetch('/api/game/spin', {
-        method: 'POST', credentials: 'include'
-    });
-    const data = await res.json();
-    if (data.error) return alert(data.error);
-    
-    updateReels(data.reels);
-    balance = data.new_balance;
-    showWin(`+${data.reward}`);
-    updateUI();
-    loadLeaderboard();
-}
-
-async function joinMatch() {
-    const res = await fetch('/api/match/join', {
-        method: 'POST', credentials: 'include'
-    });
-    const data = await res.json();
-    
-    if (data.status === 'waiting') {
-        document.getElementById('match-status').textContent = '⏳ Waiting for opponent...';
-        document.getElementById('match-status').className = 'status status-waiting';
-        document.getElementById('match-status').style.display = 'block';
-        pollForMatch();
-    } else if (data.match_id) {
-        matchId = data.match_id;
-        isInMatch = true;
-        document.getElementById('joinBtn').style.display = 'none';
-        document.getElementById('leaveBtn').style.display = 'block';
-        document.getElementById('matchSpinBtn').style.display = 'block';
-        startMatchPolling();
-    }
-}
-
-function pollForMatch() {
-    pollInterval = setInterval(async () => {
-        const res = await fetch('/api/match/join', {method: 'POST', credentials: 'include'});
+    window.onload = async () => {
+        const res = await fetch('/api/auth/check');
         const data = await res.json();
-        if (data.match_id) {
-            clearInterval(pollInterval);
-            matchId = data.match_id;
-            startMatchPolling();
+        if (data.logged_in) {
+            document.getElementById('auth').style.display = 'none';
+            document.getElementById('game').style.display = 'block';
+            document.getElementById('name-tag').innerText = "Player: " + data.user.username;
+            document.getElementById('bal-tag').innerText = "Balance: " + data.user.balance;
+            loadLead();
         }
-    }, 2000);
-}
+    };
 
-async function startMatchPolling() {
-    document.getElementById('match-status').textContent = '✅ Match started!';
-    document.getElementById('match-status').className = 'status status-active';
-    document.getElementById('matchSpinBtn').style.display = 'block';
-    pollMatchStatus();
-}
+    async function joinMatch() {
+        document.getElementById('status-msg').innerText = "Searching for opponent...";
+        const res = await fetch('/api/match/join', {method: 'POST'});
+        const data = await res.json();
+        if (data.match_id) startBattle(data.match_id);
+        else poll = setInterval(async () => {
+            const r = await fetch('/api/match/join', {method: 'POST'});
+            const d = await r.json();
+            if (d.match_id) { clearInterval(poll); startBattle(d.match_id); }
+        }, 2000);
+    }
 
-async function pollMatchStatus() {
-    if (pollInterval) clearInterval(pollInterval);
-    pollInterval = setInterval(async () => {
-        try {
-            const res = await fetch(`/api/match/${matchId}/status`, {credentials: 'include'});
+    function startBattle(id) {
+        matchId = id;
+        document.getElementById('joinBtn').style.display = 'none';
+        document.getElementById('spinBtn').style.display = 'inline-block';
+        document.getElementById('battle-stats').style.display = 'block';
+        
+        poll = setInterval(async () => {
+            const res = await fetch(`/api/match/${matchId}/status`);
             const data = await res.json();
             
-            if (data.error) return;
+            document.getElementById('my-score').innerText = data.my_score;
+            document.getElementById('opp-score').innerText = data.opp_score;
+            document.getElementById('opp-name').innerText = data.opp_name;
             
-            document.getElementById('matchSpinBtn').disabled = !data.is_my_turn;
-            isMyTurn = data.is_my_turn;
-            
-            if (data.is_my_turn) {
-                document.getElementById('turn-indicator').textContent = '✅ YOUR TURN!';
-                document.getElementById('turn-indicator').className = 'turn-indicator my-turn';
-                document.getElementById('turn-indicator').style.display = 'block';
-            } else {
-                document.getElementById('turn-indicator').style.display = 'none';
-            }
-            
-            document.getElementById('points').textContent = data.my_total;
-            document.getElementById('opp-info').innerHTML = `
-                <div>Opponent: ${data.opp_username}</div>
-                <div>Your Score: ${data.my_total} | Opp: ${data.opp_total}</div>
-            `;
-            document.getElementById('match-info').style.display = 'block';
-            
+            // Update History Table
+            document.getElementById('history-body').innerHTML = data.history.map(h => 
+                `<tr><td>${h.player}</td><td>${h.reels.join('')}</td><td>+${h.points}</td></tr>`
+            ).reverse().join('');
+
             if (data.status === 'finished') {
-                clearInterval(pollInterval);
-                document.getElementById('match-status').textContent = `🏆 Winner: ${data.winner || 'Draw'}`;
-                document.getElementById('match-status').className = 'status status-finished';
-                document.getElementById('matchSpinBtn').style.display = 'none';
+                document.getElementById('status-msg').innerText = "🏁 WINNER: " + data.winner;
+                document.getElementById('spinBtn').disabled = true;
+                clearInterval(poll);
+                setTimeout(() => location.reload(), 5000);
+            } else {
+                document.getElementById('status-msg').innerText = data.is_my_turn ? "🔥 YOUR TURN!" : "⌛ OPPONENT IS SPINNING...";
+                document.getElementById('spinBtn').disabled = !data.is_my_turn;
+                if(data.is_my_turn) document.getElementById('game').classList.add('my-turn');
+                else document.getElementById('game').classList.remove('my-turn');
             }
-        } catch (e) {}
-    }, 1000);
-}
-
-async function matchSpin() {
-    if (!isMyTurn) return alert('Not your turn!');
-    
-    const res = await fetch(`/api/match/${matchId}/spin`, {
-        method: 'POST', credentials: 'include'
-    });
-    const data = await res.json();
-    
-    if (data.error) return alert(data.error);
-    
-    updateReels(data.reels);
-    showWin(`+${data.score}`);
-    if (data.match_complete) {
-        document.getElementById('match-status').textContent = '🏆 MATCH COMPLETE!';
-        document.getElementById('matchSpinBtn').style.display = 'none';
+        }, 1500);
     }
-}
 
-function leaveMatch() {
-    if (pollInterval) clearInterval(pollInterval);
-    matchId = null;
-    isInMatch = false;
-    document.getElementById('joinBtn').style.display = 'block';
-    document.getElementById('leaveBtn').style.display = 'none';
-    document.getElementById('matchSpinBtn').style.display = 'none';
-    document.getElementById('match-status').style.display = 'none';
-    document.getElementById('match-info').style.display = 'none';
-}
+    async function spin() {
+        const res = await fetch(`/api/match/${matchId}/spin`, {method: 'POST'});
+        const data = await res.json();
+        document.getElementById('r1').innerText = data.reels[0];
+        document.getElementById('r2').innerText = data.reels[1];
+        document.getElementById('r3').innerText = data.reels[2];
+    }
 
-async function loadLeaderboard() {
-    const res = await fetch('/api/leaderboard');
-    const data = await res.json();
-    document.getElementById('leaderboard').innerHTML = 
-        data.map((u, i) => `<div class="leader-item">${i+1}. ${u.username}: ${u.balance}</div>`).join('');
-}
+    async function loadLead() {
+        const res = await fetch('/api/leaderboard');
+        const data = await res.json();
+        document.getElementById('lead').innerHTML = "<b>Global Ranking:</b> " + data.map(i => `${i.u}(${i.b})`).join(' | ');
+    }
 
-function updateReels(reels) {
-    ['r1','r2','r3'].forEach((r, i) => {
-        document.getElementById(r).textContent = reels[i];
-    });
-}
-
-function showWin(msg) {
-    const winEl = document.getElementById('win-msg');
-    winEl.textContent = msg;
-    setTimeout(() => winEl.textContent = '', 2000);
-}
-
-async function adminAlter() {
-    const username = document.getElementById('admin-user').value;
-    const balance = document.getElementById('admin-balance').value;
-    
-    const res = await fetch('/api/admin/alter-balance', {
-        method: 'POST',
-        credentials: 'include',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({username, balance})
-    });
-    const data = await res.json();
-    document.getElementById('admin-msg').textContent = data.success ? '✅ Done!' : '❌ ' + data.error;
-}
-
-function toggleAdmin() {
-    const panel = document.getElementById('admin-panel');
-    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-}
-
-async function logout() {
-    await fetch('/api/auth/logout', {method: 'POST', credentials: 'include'});
-    location.reload();
-}
+    function logout() { fetch('/api/auth/logout', {method: 'POST'}).then(() => location.reload()); }
 </script>
 </body>
 </html>
