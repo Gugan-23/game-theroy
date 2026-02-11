@@ -1,407 +1,170 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Lucky 777 Multiplayer</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<style>
-:root {--gold: linear-gradient(to bottom, #bf953f, #fcf6ba, #b38728);}
-body {
-margin: 0; min-height: 100vh; background: radial-gradient(circle, #1a0033, #000);
-color: white; font-family: Segoe UI, sans-serif; display: flex; justify-content: center; align-items: center;
-}
-button {
-background: var(--gold); border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer;
-}
-button:disabled {background: #666; cursor: not-allowed;}
-input {width: 250px; padding: 10px; margin: 8px 0; border-radius: 6px; border: none;}
-#auth, #game {background: rgba(0,0,0,0.75); padding: 30px; border-radius: 15px; border: 2px solid gold;}
-#game {display: none; width: 1200px;}
-.grid {display: grid; grid-template-columns: 260px 1fr 280px; gap: 20px;}
-.reels {display: flex; gap: 15px; justify-content: center;}
-.reel {width: 100px; height: 120px; font-size: 70px; line-height: 120px; background: white; color: black; border-radius: 10px; text-align: center;}
-.leader-item {display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding: 6px;}
-#balance {font-size: 48px; color: gold;}
-.win {color: #0f0; font-size: 22px; height: 30px;}
-.turn-indicator {background: rgba(255,255,0,0.2); padding: 8px; border-radius: 5px; margin: 10px 0; text-align: center; font-weight: bold;}
-.my-turn {border: 2px solid #0f0; background: rgba(0,255,0,0.2);}
-.opp-turn {border: 2px solid #f00; background: rgba(255,0,0,0.2);}
-.spin-result {background: rgba(0,255,0,0.1); padding: 8px; margin: 5px 0; border-radius: 5px; border-left: 4px solid gold;}
-.opponent-section {background: rgba(255,215,0,0.1); border: 1px solid gold; border-radius: 10px; padding: 15px; margin-top: 10px; max-height: 400px; overflow-y: auto;}
-.scores-list {max-height: 200px; overflow-y: auto;}
-.score-item {display: flex; justify-content: space-between; padding: 4px 8px; font-size: 12px; background: rgba(255,255,255,0.1); margin: 2px 0; border-radius: 3px;}
-.status-waiting {color: orange;}
-.status-ready {color: #0f0;}
-.status-complete {color: #f0f;}
-#countdown {font-size: 24px; font-weight: bold; color: #00f;}
-.search-timer {color: orange; font-size: 18px;}
-.no-opponent {color: #f00; font-weight: bold;}
-.match-btn {flex: 1; padding: 10px; font-size: 16px;}
-</style>
+    <meta charset="UTF-8">
+    <title>Lucky 777 Multiplayer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        :root {--gold: linear-gradient(to bottom, #bf953f, #fcf6ba, #b38728);}
+        body { margin: 0; background: #1a0033; color: white; font-family: sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        #auth, #game { background: rgba(0,0,0,0.9); padding: 30px; border-radius: 15px; border: 2px solid gold; width: 90%; max-width: 800px; }
+        .reel-container { display: flex; gap: 10px; justify-content: center; margin: 20px 0; }
+        .reel { width: 80px; height: 100px; background: white; color: black; font-size: 50px; display: flex; align-items: center; justify-content: center; border-radius: 10px; }
+        button { background: var(--gold); border: none; padding: 10px 20px; font-weight: bold; cursor: pointer; border-radius: 5px; }
+        button:disabled { background: #555; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
+        .box { background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; }
+        .my-turn { border: 2px solid #0f0; box-shadow: 0 0 10px #0f0; }
+    </style>
 </head>
 <body>
+
 <div id="auth">
-<h1 style="color:gold">LUCKY 777</h1>
-<input id="username" placeholder="Username">
-<input id="password" type="password" placeholder="Password">
-<button onclick="auth('login')">Login</button>
-<button onclick="auth('signup')" style="margin-top:10px;background:none;color:gold;border:1px solid gold;">Sign Up</button>
-<p id="auth-msg" style="color:red"></p>
+    <h2>🎰 LUCKY 777 LOGIN</h2>
+    <input id="u" placeholder="Username" style="padding:10px; width:90%"><br><br>
+    <input id="p" type="password" placeholder="Password" style="padding:10px; width:90%"><br><br>
+    <button onclick="auth('login')">LOGIN</button>
+    <button onclick="auth('signup')" style="background:none; color:gold; border:1px solid gold">SIGN UP</button>
+    <p id="auth-err" style="color:red"></p>
 </div>
 
-<div id="game">
-<div style="display:flex;justify-content:space-between;align-items:center">
-<h2>Welcome <span id="player" style="color:gold"></span></h2>
-<button onclick="logout()" style="background:red;color:white">Logout</button>
-</div>
+<div id="game" style="display:none">
+    <div style="display:flex; justify-content:space-between">
+        <h3 id="user-display">User: -</h3>
+        <h3 id="balance-display" style="color:gold">Balance: 0</h3>
+        <button onclick="logout()" style="background:red; color:white">Logout</button>
+    </div>
 
-<div class="grid">
-<!-- LEFT PANEL -->
-<div>
-<h3 style="color:gold">Controls</h3>
-<p>5 Spins Each | Alternate Turns</p>
-<button onclick="handleSpin()" style="width:100%;font-size:22px" id="spinBtn">SPIN</button>
+    <div class="reel-container">
+        <div class="reel" id="r1">?</div>
+        <div class="reel" id="r2">?</div>
+        <div class="reel" id="r3">?</div>
+    </div>
 
-<div style="margin-top:15px">
-<h4 style="color:gold">🎮 1v1 MATCH</h4>
-<button onclick="joinMatch()" class="match-btn" id="joinBtn">Join Match</button>
-<button onclick="leaveMatch()" class="match-btn" id="leaveBtn" style="display:none;background:red">Leave Match</button>
-<p id="match-msg"></p>
-<div id="search-timer" class="search-timer" style="display:none"></div>
-<div id="countdown"></div>
-<button onclick="startRound2()" id="round2Btn" style="display:none;width:100%;margin-top:10px">Start Round 2</button>
-</div>
+    <div style="text-align:center">
+        <button id="spinBtn" onclick="singleSpin()" style="font-size:20px; width:200px">🎰 SPIN (10 pts)</button>
+        <button id="joinBtn" onclick="joinMatch()" style="font-size:20px; background:blue; color:white">⚔️ 1v1 BATTLE</button>
+    </div>
 
-<!-- SPIN HISTORY -->
-<div id="spin-history" style="display:none">
-<h4 style="color:gold;margin-top:15px">My Spins</h4>
-<div id="my-spins-list" class="scores-list"></div>
-</div>
-</div>
-
-<!-- CENTER -->
-<div style="text-align:center">
-<div id="balance">0</div>
-<div>POINTS</div>
-<div class="reels">
-<div class="reel" id="r1">7️⃣</div>
-<div class="reel" id="r2">7️⃣</div>
-<div class="reel" id="r3">7️⃣</div>
-</div>
-<div class="win" id="win-msg"></div>
-<div id="turn-indicator" class="turn-indicator" style="display:none"></div>
-</div>
-
-<!-- RIGHT PANEL -->
-<div>
-<h3 style="color:gold">Leaderboard</h3>
-<div id="leaderboard">Loading...</div>
-
-<div id="opponent-section" class="opponent-section" style="display:none;margin-top:20px">
-<h4 style="color:gold">Opponent: <span id="opp-username">-</span></h4>
-<div id="opp-turn-indicator" class="turn-indicator" style="display:none"></div>
-<h5 style="color:#0f0">Opponent Spins</h5>
-<div id="opp-spins-list" class="scores-list"></div>
-<div id="match-results"></div>
-</div>
-</div>
-</div>
+    <div class="grid">
+        <div class="box">
+            <h4>🏆 LEADERBOARD</h4>
+            <div id="leaderboard"></div>
+        </div>
+        <div class="box" id="match-box" style="display:none">
+            <h4 id="match-status">Finding Opponent...</h4>
+            <div id="battle-area">
+                <p>Opponent: <span id="opp-name">-</span></p>
+                <p>My Score: <span id="my-score">0</span> | Opp Score: <span id="opp-score">0</span></p>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
-let balance = 0;
-let matchId = null;
-let pollInterval = null;
-let searchTimeout = null;
-let isInMatch = false;
-let isMyTurn = false;
-let searchStartTime = 0;
+    let balance = 0;
+    let matchId = null;
+    let pollInterval = null;
 
-async function auth(type) {
-    const u = document.getElementById('username').value;
-    const p = document.getElementById('password').value;
-    try {
+    // IMPORTANT: Check session on refresh
+    window.onload = async function() {
+        const res = await fetch('/api/auth/check');
+        const data = await res.json();
+        if (data.logged_in) {
+            showGame(data.user);
+        }
+    };
+
+    async function auth(type) {
+        const username = document.getElementById('u').value;
+        const password = document.getElementById('p').value;
         const res = await fetch(`/api/auth/${type}`, {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({username: u, password: p})
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({username, password})
         });
         const data = await res.json();
-        if (data.error) {
-            document.getElementById('auth-msg').innerText = data.error;
-        } else if (type === 'login' && data.user) {
-            startGame(data.user);
-        }
-    } catch (error) {
-        document.getElementById('auth-msg').innerText = 'Connection error';
+        if (data.error) document.getElementById('auth-err').innerText = data.error;
+        else showGame(data.user);
     }
-}
 
-function startGame(user) {
-    document.getElementById('auth').style.display = "none";
-    document.getElementById('game').style.display = "block";
-    document.getElementById('player').innerText = user.username;
-    balance = user.balance;
-    balanceUI();
-    loadLeaderboard();
-    setInterval(loadLeaderboard, 8000);
-}
-
-async function handleSpin() {
-    if (isInMatch) {
-        await spinMatch();
-    } else {
-        await spinSingle();
-    }
-}
-
-async function spinSingle() {
-    try {
-        const res = await fetch('/api/game/spin', {method: 'POST'});
-        const data = await res.json();
-        if (data.error) { alert(data.error); return; }
-        updateReels(data.reels);
-        balance = data.new_balance;
-        balanceUI();
-        showWinMsg(data.reward > 0 ? `WIN +${data.reward}` : "");
+    function showGame(user) {
+        document.getElementById('auth').style.display = 'none';
+        document.getElementById('game').style.display = 'block';
+        document.getElementById('user-display').innerText = user.username;
+        balance = user.balance;
+        updateUI();
         loadLeaderboard();
-    } catch (error) {
-        alert('Spin error');
+        setInterval(loadLeaderboard, 10000);
     }
-}
 
-async function spinMatch() {
-    if (!isMyTurn) { alert("Wait for your turn!"); return; }
-    
-    try {
-        const res = await fetch(`/api/match/${matchId}/spin`, {method: 'POST'});
-        const data = await res.json();
-        
-        if (data.error) { alert(data.error); return; }
-        
-        updateReels(data.reels);
-        showWinMsg(`+${data.score}`);
-        updateMatchStatus();
-        
-        if (data.round_complete) {
-            document.getElementById('match-msg').innerText = `Round ${data.round_num} Complete!`;
-            document.getElementById('match-msg').className = 'status-complete';
-            showRoundResult(data);
-            document.getElementById('round2Btn').style.display = 'block';
-            document.getElementById('spinBtn').disabled = true;
-        }
-        
-        balanceUI();
-        loadLeaderboard();
-    } catch (error) {
-        console.error('Match spin error:', error);
+    function updateUI() {
+        document.getElementById('balance-display').innerText = `Balance: ${balance}`;
     }
-}
 
-async function updateMatchStatus() {
-    if (!matchId || !isInMatch) return;
-    
-    try {
-        const res = await fetch(`/api/match/${matchId}/status`);
-        const data = await res.json();
-        
-        if (data.error) return;
-        
-        isMyTurn = data.can_spin;
-        document.getElementById('spinBtn').disabled = !isMyTurn;
-        
-        // Turn indicators
-        const turnIndicator = document.getElementById('turn-indicator');
-        const oppTurnIndicator = document.getElementById('opp-turn-indicator');
-        
-        if (isMyTurn) {
-            turnIndicator.innerText = "✅ YOUR TURN - SPIN NOW!";
-            turnIndicator.className = "turn-indicator my-turn";
-            turnIndicator.style.display = 'block';
-            oppTurnIndicator.style.display = 'none';
-        } else {
-            turnIndicator.style.display = 'none';
-            oppTurnIndicator.innerText = "⏳ OPPONENT'S TURN";
-            oppTurnIndicator.className = "turn-indicator opp-turn";
-            oppTurnIndicator.style.display = 'block';
-        }
-        
-        updateSpinsDisplay(data.my_spins, data.opp_spins, data.my_total, data.opp_total);
-        document.getElementById('opp-username').innerText = data.opponent_username;
-    } catch (error) {
-        console.log('Status update error');
-    }
-}
-
-function updateSpinsDisplay(mySpins, oppSpins, myTotal, oppTotal) {
-    document.getElementById('my-spins-list').innerHTML = mySpins.map((spin, i) => 
-        `<div class="score-item">
-            <span>Spin ${i+1}: ${spin.reels.join('')}</span>
-            <span style="color:gold">+${spin.score}</span>
-        </div>`
-    ).join('');
-    
-    document.getElementById('opp-spins-list').innerHTML = oppSpins.map((spin, i) => 
-        `<div class="score-item">
-            <span>Spin ${i+1}: ${spin.reels.join('')}</span>
-            <span style="color:gold">+${spin.score}</span>
-        </div>`
-    ).join('');
-    
-    document.getElementById('spin-history').style.display = 'block';
-    document.getElementById('opponent-section').style.display = 'block';
-}
-
-async function joinMatch() {
-    if (isInMatch) return;
-    
-    document.getElementById('match-msg').innerText = "Searching opponent...";
-    document.getElementById('match-msg').className = "status-waiting";
-    document.getElementById('joinBtn').style.display = 'none';
-    document.getElementById('leaveBtn').style.display = 'block';
-    document.getElementById('spinBtn').disabled = true;
-    isInMatch = true;
-    
-    searchStartTime = Date.now();
-    document.getElementById('search-timer').style.display = 'block';
-    
-    try {
-        const res = await fetch('/api/match/join', {method: 'POST'});
-        const data = await res.json();
-        
-        if (data.status === "waiting") {
-            startSearchTimeout(data.search_timeout);
-            pollForOpponent();
-        } else if (data.match_id) {
-            matchId = data.match_id;
-            document.getElementById('match-msg').innerText = "Opponent found! Your turn first!";
-            document.getElementById('match-msg').className = "status-ready";
-            document.getElementById('search-timer').style.display = 'none';
-            pollStatus();
-        }
-    } catch (error) {
-        resetMatchUI();
-    }
-}
-
-function startSearchTimeout(timeoutSeconds) {
-    let timeLeft = timeoutSeconds;
-    searchTimeout = setInterval(() => {
-        timeLeft--;
-        document.getElementById('search-timer').innerText = `Searching... ${timeLeft}s`;
-        if (timeLeft <= 0) {
-            clearInterval(searchTimeout);
-            document.getElementById('match-msg').innerHTML = '❌ <span class="no-opponent">Player not found</span>';
-            document.getElementById('search-timer').style.display = 'none';
-            resetMatchUI(true);
-        }
-    }, 1000);
-}
-
-function pollForOpponent() {
-    pollInterval = setInterval(async () => {
-        try {
-            const res = await fetch('/api/match/join', {method: 'POST'});
-            const data = await res.json();
-            if (data.match_id) {
-                matchId = data.match_id;
-                clearInterval(pollInterval);
-                clearInterval(searchTimeout);
-                document.getElementById('match-msg').innerText = "Match started!";
-                document.getElementById('search-timer').style.display = 'none';
-                pollStatus();
-            }
-        } catch (e) {}
-    }, 2000);
-}
-
-function pollStatus() {
-    if (pollInterval) clearInterval(pollInterval);
-    pollInterval = setInterval(updateMatchStatus, 1000);
-}
-
-function leaveMatch() {
-    if (pollInterval) clearInterval(pollInterval);
-    if (searchTimeout) clearInterval(searchTimeout);
-    if (matchId) fetch(`/api/match/${matchId}/leave`);
-    resetMatchUI();
-    isInMatch = false;
-    matchId = null;
-}
-
-function resetMatchUI(keepButtons = false) {
-    document.getElementById('joinBtn').style.display = keepButtons ? 'none' : 'block';
-    document.getElementById('leaveBtn').style.display = 'none';
-    document.getElementById('spinBtn').disabled = false;
-    document.getElementById('match-msg').innerText = "";
-    document.getElementById('search-timer').style.display = 'none';
-    document.getElementById('spin-history').style.display = 'none';
-    document.getElementById('opponent-section').style.display = 'none';
-    document.getElementById('round2Btn').style.display = 'none';
-}
-
-async function startRound2() {
-    try {
-        const res = await fetch(`/api/match/${matchId}/start_round2`, {method: 'POST'});
-        const data = await res.json();
-        if (data.success) {
-            document.getElementById('match-msg').innerText = "Round 2 Started!";
-            document.getElementById('round2Btn').style.display = 'none';
-            document.getElementById('spinBtn').disabled = false;
-            updateMatchStatus();
-        }
-    } catch (error) {
-        console.error('Round 2 error');
-    }
-}
-
-function updateReels(reels) {
-    document.getElementById('r1').innerText = reels[0];
-    document.getElementById('r2').innerText = reels[1];
-    document.getElementById('r3').innerText = reels[2];
-}
-
-function showWinMsg(msg) {
-    const winMsg = document.getElementById('win-msg');
-    winMsg.innerText = msg;
-    setTimeout(() => winMsg.innerText = "", 2000);
-}
-
-function showRoundResult(data) {
-    const resultsDiv = document.getElementById('match-results');
-    const winner = data.round_winner === 'p1' ? 'YOU' : 'OPPONENT';
-    resultsDiv.innerHTML = `
-        <div style="color:gold;font-weight:bold;margin:10px 0">🏆 Round ${data.round_num} Winner: ${winner}</div>
-        <div style="display:flex;justify-content:space-between">
-            <span>You: ${data.p1_total}</span>
-            <span>Opponent: ${data.p2_total}</span>
-        </div>
-    `;
-}
-
-function balanceUI() {
-    document.getElementById('balance').innerText = balance;
-}
-
-async function loadLeaderboard() {
-    try {
+    async function loadLeaderboard() {
         const res = await fetch('/api/leaderboard');
         const data = await res.json();
-        document.getElementById('leaderboard').innerHTML = 
-            data.map((u, i) => `
-                <div class="leader-item">
-                    <span>${i + 1}. ${u.username}</span>
-                    <span style="color:gold">${u.balance}</span>
-                </div>
-            `).join('');
-    } catch (error) {
-        document.getElementById('leaderboard').innerHTML = 'Loading...';
+        document.getElementById('leaderboard').innerHTML = data.map(u => 
+            `<div>${u.username}: ${u.balance}</div>`).join('');
     }
-}
 
-function logout() {
-    leaveMatch();
-    fetch('/api/auth/logout').then(() => location.reload());
-}
+    async function singleSpin() {
+        if (balance < 10) return alert("Low balance!");
+        const res = await fetch('/api/game/spin', {method: 'POST'});
+        const data = await res.json();
+        updateReels(data.reels);
+        balance = data.new_balance;
+        updateUI();
+    }
+
+    function updateReels(reels) {
+        document.getElementById('r1').innerText = reels[0];
+        document.getElementById('r2').innerText = reels[1];
+        document.getElementById('r3').innerText = reels[2];
+    }
+
+    async function joinMatch() {
+        document.getElementById('match-box').style.display = 'block';
+        const res = await fetch('/api/match/join', {method: 'POST'});
+        const data = await res.json();
+        if (data.match_id) startPolling(data.match_id);
+        else if (data.status === 'waiting') {
+            pollInterval = setInterval(async () => {
+                const check = await fetch('/api/match/join', {method: 'POST'});
+                const d = await check.json();
+                if (d.match_id) { clearInterval(pollInterval); startPolling(d.match_id); }
+            }, 3000);
+        }
+    }
+
+    function startPolling(id) {
+        matchId = id;
+        pollInterval = setInterval(async () => {
+            const res = await fetch(`/api/match/${matchId}/status`);
+            const data = await res.json();
+            
+            document.getElementById('match-status').innerText = data.is_my_turn ? "YOUR TURN!" : "Opponent Turn...";
+            document.getElementById('opp-name').innerText = data.opp_username;
+            document.getElementById('my-score').innerText = data.my_total;
+            document.getElementById('opp-score').innerText = data.opp_total;
+            
+            document.getElementById('spinBtn').onclick = data.is_my_turn ? battleSpin : singleSpin;
+            if (data.is_my_turn) document.getElementById('match-box').classList.add('my-turn');
+            else document.getElementById('match-box').classList.remove('my-turn');
+
+        }, 2000);
+    }
+
+    async function battleSpin() {
+        const res = await fetch(`/api/match/${matchId}/spin`, {method: 'POST'});
+        const data = await res.json();
+        updateReels(data.reels);
+    }
+
+    function logout() {
+        fetch('/api/auth/logout', {method: 'POST'}).then(() => location.reload());
+    }
 </script>
 </body>
 </html>
