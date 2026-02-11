@@ -86,31 +86,44 @@ def join_match():
     if not uid:
         return jsonify({"error": "Login required"}), 401
 
-    waiting = queue_col.find_one()
+    # Clean old queue entries (>60 seconds)
+    queue_col.delete_many({"timestamp": {"$lt": time.time() - 60}})
+
+    waiting = queue_col.find_one({"timestamp": {"$gte": time.time() - 60}})
     if waiting:
+        # Get both players' info
+        p1_user = users_col.find_one({"_id": ObjectId(waiting["user_id"])})
+        p1_username = p1_user["username"] if p1_user else waiting.get("username", "Player1")
+        
+        p2_user = users_col.find_one({"_id": ObjectId(uid)})
+        p2_username = p2_user["username"] if p2_user else "Player2"
+        
         match = {
             "player1": waiting["user_id"],
             "player2": uid,
-            "p1_info": {"username": waiting.get("username", "Player1"), "spins": [], "total": 0},
-            "p2_info": {"username": "", "spins": [], "total": 0},
+            "p1_info": {"username": p1_username, "spins": [], "total": 0},
+            "p2_info": {"username": p2_username, "spins": [], "total": 0},
             "current_round": 1,
-            "current_turn": "p1",  # p1 starts first
-            "round_spins": 0,  # spins completed in current round
+            "current_turn": "p1",
+            "round_spins": 0,
             "status": "waiting",
             "round1_complete_time": None,
-            "match_results": []
+            "match_results": [],
+            "created_at": time.time()
         }
-        # Get p2 username
-        p2_user = users_col.find_one({"_id": ObjectId(uid)})
-        match["p2_info"]["username"] = p2_user["username"] if p2_user else "Player2"
         
         result = matches_col.insert_one(match)
         queue_col.delete_one({"_id": waiting["_id"]})
         return jsonify({"match_id": str(result.inserted_id)})
     else:
+        # Add to queue with timestamp
         p1_user = users_col.find_one({"_id": ObjectId(uid)})
-        queue_col.insert_one({"user_id": uid, "username": p1_user["username"] if p1_user else "Player1"})
-        return jsonify({"status": "waiting"})
+        queue_col.insert_one({
+            "user_id": uid, 
+            "username": p1_user["username"] if p1_user else "Player1",
+            "timestamp": time.time()
+        })
+        return jsonify({"status": "waiting", "search_timeout": 60})
 
 @app.route('/api/match/<match_id>/status')
 def match_status(match_id):
@@ -123,11 +136,8 @@ def match_status(match_id):
         return jsonify({"error": "Match not found"}), 404
 
     is_p1 = uid == match["player1"]
-    opponent_id = match["player2"] if is_p1 else match["player1"]
-    opponent_username = match["p2_info"]["username"] if is_p1 else match["p1_info"]["username"]
-    
-    my_spins = match["p1_info"]["spins"] if is_p1 else match["p2_info"]["spins"]
-    opp_spins = match["p2_info"]["spins"] if is_p1 else match["p1_info"]["spins"]
+    my_info = match["p1_info"] if is_p1 else match["p2_info"]
+    opp_info = match["p2_info"] if is_p1 else match["p1_info"]
     
     return jsonify({
         "match_id": match_id,
@@ -135,10 +145,12 @@ def match_status(match_id):
         "current_round": match["current_round"],
         "current_turn": match["current_turn"],
         "round_spins": match["round_spins"],
-        "my_spins": my_spins,
-        "opp_spins": opp_spins,
+        "my_spins": my_info["spins"],
+        "opp_spins": opp_info["spins"],
+        "my_total": my_info["total"],
+        "opp_total": opp_info["total"],
         "can_spin": (match["current_turn"] == ("p1" if is_p1 else "p2")),
-        "opponent_username": opponent_username,
+        "opponent_username": opp_info["username"],
         "round1_complete_time": match.get("round1_complete_time")
     })
 
@@ -169,39 +181,43 @@ def match_spin(match_id):
     elif len(set(reels)) == 2:
         score = 10
 
-    # Update player spins
-    my_spins = match["p1_info"]["spins"] if is_p1 else match["p2_info"]["spins"]
-    my_spins.append({"reels": reels, "score": score, "time": time.time()})
-    
-    # Switch turn
-    new_turn = "p2" if is_p1 else "p1"
-    round_spins = match["round_spins"] + 1
-    
-    # Update match
-    update_data = {
-        "$set": {
-            "current_turn": new_turn,
-            "round_spins": round_spins
-        }
-    }
+    # Update player spins - CORRECTED MongoDB UPDATE
     if is_p1:
-        update_data["$set"]["p1_info.spins"] = my_spins
-        update_data["$set"]["p1_info.total"] = sum(s["score"] for s in my_spins)
+        new_spins = match["p1_info"]["spins"] + [{"reels": reels, "score": score}]
+        new_total = sum(s["score"] for s in new_spins)
+        matches_col.update_one(
+            {"_id": ObjectId(match_id)},
+            {
+                "$set": {
+                    "current_turn": "p2",
+                    "round_spins": match["round_spins"] + 1,
+                    "p1_info.spins": new_spins,
+                    "p1_info.total": new_total
+                }
+            }
+        )
     else:
-        update_data["$set"]["p2_info.spins"] = my_spins
-        update_data["$set"]["p2_info.total"] = sum(s["score"] for s in my_spins)
-    
-    matches_col.update_one({"_id": ObjectId(match_id)}, update_data)
+        new_spins = match["p2_info"]["spins"] + [{"reels": reels, "score": score}]
+        new_total = sum(s["score"] for s in new_spins)
+        matches_col.update_one(
+            {"_id": ObjectId(match_id)},
+            {
+                "$set": {
+                    "current_turn": "p1",
+                    "round_spins": match["round_spins"] + 1,
+                    "p2_info.spins": new_spins,
+                    "p2_info.total": new_total
+                }
+            }
+        )
 
-    # Check round completion (10 spins total - 5 each)
+    # Check round completion
     updated_match = matches_col.find_one({"_id": ObjectId(match_id)})
     if updated_match["round_spins"] >= 10:
-        # Round complete
         p1_total = updated_match["p1_info"]["total"]
         p2_total = updated_match["p2_info"]["total"]
         round_winner = "p1" if p1_total > p2_total else "p2"
         
-        # Award round winner
         winner_id = updated_match["player1"] if round_winner == "p1" else updated_match["player2"]
         users_col.update_one({"_id": ObjectId(winner_id)}, {"$inc": {"balance": 200}})
         
@@ -212,31 +228,21 @@ def match_spin(match_id):
                     "status": "round1_complete",
                     "round1_complete_time": time.time(),
                     "round1_winner": round_winner,
-                    "match_results": updated_match["match_results"] + [{
-                        "round": 1,
-                        "p1_total": p1_total,
-                        "p2_total": p2_total,
-                        "winner": round_winner
+                    "match_results": updated_match.get("match_results", []) + [{
+                        "round": 1, "p1_total": p1_total, "p2_total": p2_total, "winner": round_winner
                     }]
                 }
             }
         )
         
         return jsonify({
-            "reels": reels,
-            "score": score,
-            "round_complete": True,
-            "round_num": 1,
-            "p1_total": p1_total,
-            "p2_total": p2_total,
-            "round_winner": round_winner
+            "reels": reels, "score": score, "round_complete": True,
+            "round_num": 1, "p1_total": p1_total, "p2_total": p2_total, "round_winner": round_winner
         })
 
     return jsonify({
-        "reels": reels,
-        "score": score,
-        "turn_switched": True,
-        "next_player": new_turn
+        "reels": reels, "score": score, "turn_switched": True,
+        "next_player": "p2" if is_p1 else "p1"
     })
 
 @app.route('/api/match/<match_id>/start_round2', methods=['POST'])
@@ -249,19 +255,13 @@ def start_round2(match_id):
     if not match or match["status"] != "round1_complete":
         return jsonify({"error": "Cannot start round 2"}), 400
 
-    # Reset for round 2
     matches_col.update_one(
         {"_id": ObjectId(match_id)},
         {
             "$set": {
-                "current_round": 2,
-                "current_turn": "p1",
-                "round_spins": 0,
-                "status": "waiting",
-                "p1_info.spins": [],
-                "p2_info.spins": [],
-                "p1_info.total": 0,
-                "p2_info.total": 0
+                "current_round": 2, "current_turn": "p1", "round_spins": 0,
+                "status": "waiting", "p1_info.spins": [], "p2_info.spins": [],
+                "p1_info.total": 0, "p2_info.total": 0
             }
         }
     )
