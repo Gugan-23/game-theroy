@@ -3,35 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>1v1 Lucky 777 Battle</title>
+    <title>1v1 Lucky 777 - 10 Rounds Battle</title>
     <style>
-        body { background: #0f001a; color: white; font-family: sans-serif; text-align: center; margin: 0; padding: 20px; }
-        #auth, #game { background: #1a1a1a; border: 2px solid gold; border-radius: 15px; padding: 20px; max-width: 800px; margin: auto; }
-        .reels { display: flex; justify-content: center; gap: 10px; margin: 20px; }
-        .reel { background: white; color: black; font-size: 50px; width: 80px; height: 100px; line-height: 100px; border-radius: 10px; }
-        button { background: linear-gradient(#bf953f, #fcf6ba); border: none; padding: 15px 30px; font-weight: bold; cursor: pointer; border-radius: 5px; margin: 10px; }
-        button:disabled { filter: grayscale(1); cursor: not-allowed; }
-        table { width: 100%; margin-top: 20px; border-collapse: collapse; background: #222; }
-        th, td { border: 1px solid #444; padding: 10px; }
-        .my-turn { border: 3px solid #0f0; box-shadow: 0 0 15px #0f0; }
-        .leaderboard { margin-top: 20px; font-size: 14px; color: #aaa; }
+        body {background: linear-gradient(45deg, #0f001a, #1a0033); color: white; font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 20px;}
+        #auth, #game {background: rgba(26,26,26,0.95); border: 2px solid gold; border-radius: 15px; padding: 30px; max-width: 900px; margin: auto;}
+        .reels {display: flex; justify-content: center; gap: 10px; margin: 20px;}
+        .reel {background: linear-gradient(#fff, #f0f0f0); color: black; font-size: 50px; width: 80px; height: 100px; line-height: 100px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);}
+        button {background: linear-gradient(45deg, #bf953f, #fcf6ba); border: none; padding: 15px 30px; font-weight: bold; cursor: pointer; border-radius: 8px; margin: 10px; font-size: 16px; transition: all 0.3s;}
+        button:hover:not(:disabled) {transform: scale(1.05);}
+        button:disabled {filter: grayscale(1); cursor: not-allowed; opacity: 0.5;}
+        table {width: 100%; margin-top: 20px; border-collapse: collapse; background: rgba(34,34,34,0.8);}
+        th, td {border: 1px solid #444; padding: 12px; text-align: center;}
+        th {background: gold; color: black;}
+        .leaderboard {margin-top: 20px; font-size: 14px; color: #ffd700; background: rgba(0,0,0,0.5); padding: 15px; border-radius: 10px;}
+        .status-green {color: #0f0; font-weight: bold;}
+        .status-orange {color: orange; font-weight: bold;}
+        .opp-connected {color: lime !important; font-weight: bold; text-shadow: 0 0 10px lime;}
+        
+        /* 🆕 COUNTDOWN STYLES */
+        .timer-container {margin: 10px 0;}
+        .timer { 
+            font-size: 36px; 
+            font-weight: bold; 
+            font-family: 'Courier New', monospace;
+            min-width: 60px; 
+            display: inline-block;
+            text-shadow: 0 0 10px currentColor;
+        }
+        .timer.safe {color: #00ff00; background: rgba(0,255,0,0.2);}
+        .timer.warning {color: #ffaa00; background: rgba(255,170,0,0.3); animation: pulse 1s infinite;}
+        .timer.danger {color: #ff4444; background: rgba(255,68,68,0.4); animation: blink 0.5s infinite;}
+        .round-info {background: rgba(255,215,0,0.2); padding: 15px; border-radius: 10px; margin: 10px 0;}
+        @keyframes pulse {0%,100%{transform:scale(1);} 50%{transform:scale(1.05);}}
+        @keyframes blink {0%,100%{opacity:1;} 50%{opacity:0.3;}}
     </style>
 </head>
 <body>
-
 <div id="auth">
-    <h2>🎰 1v1 SLOT BATTLE</h2>
-    <input id="u" placeholder="Username" style="padding:10px; width:80%"><br><br>
-    <input id="p" type="password" placeholder="Password" style="padding:10px; width:80%"><br><br>
-    <button onclick="auth('login')">LOGIN</button>
-    <button onclick="auth('signup')">SIGN UP</button>
+    <h2>🎰 1v1 LUCKY 777 - 10 ROUNDS BATTLE</h2>
+    <input id="u" placeholder="Username" style="padding:15px; width:80%; margin:10px; border-radius:5px; border:1px solid gold;">
+    <input id="p" type="password" placeholder="Password" style="padding:15px; width:80%; margin:10px; border-radius:5px; border:1px solid gold;">
+    <br><button onclick="auth('login')">LOGIN</button><button onclick="auth('signup')">SIGN UP</button>
 </div>
 
 <div id="game" style="display:none">
-    <div style="display:flex; justify-content: space-between;">
-        <span id="name-tag"></span>
-        <span id="bal-tag" style="color:gold"></span>
-        <button onclick="logout()" style="padding:5px; background:red; color:white">Logout</button>
+    <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <span id="name-tag" style="font-size: 20px; font-weight: bold;"></span>
+        <span id="bal-tag" style="color:gold; font-size: 18px;"></span>
+        <button onclick="logout()" style="padding:10px 15px; background:linear-gradient(red,darkred); color:white;">Logout</button>
     </div>
 
     <div class="reels">
@@ -41,114 +60,175 @@
     </div>
 
     <div id="match-controls">
-        <button id="joinBtn" onclick="joinMatch()">⚔️ FIND 1v1 MATCH</button>
-        <button id="spinBtn" onclick="spin()" style="display:none; font-size:20px">🎰 SPIN NOW!</button>
+        <button id="joinBtn" onclick="joinMatch()" style="font-size:20px; padding:20px 40px;">⚔️ FIND 1v1 MATCH</button>
+        <button id="spinBtn" onclick="spin()" style="display:none; font-size:24px; padding:20px 50px;">🎰 SPIN NOW!</button>
+    </div>
+
+    <div id="round-info" class="round-info" style="display:none">
+        <div style="display: flex; justify-content: space-around; align-items: center; flex-wrap: wrap;">
+            <div>🔥 Round <span id="current-round">1</span></div>
+            <div>🎯 Spin <span id="current-spin">1</span>/10</div>
+            <div class="timer-container">
+                ⏱️ <span id="timer" class="timer safe">30</span>s
+            </div>
+        </div>
     </div>
 
     <h2 id="status-msg">Welcome! Join a battle.</h2>
 
     <div id="battle-stats" style="display:none">
-        <div style="display:flex; justify-content: space-around; font-size: 20px; font-weight: bold;">
-            <div style="color:lime">ME: <span id="my-score">0</span></div>
-            <div style="color:orange">OPP (<span id="opp-name"></span>): <span id="opp-score">0</span></div>
+        <div style="display:flex; justify-content: space-around; font-size: 24px; font-weight: bold; margin-bottom: 20px;">
+            <div class="status-green">ME: <span id="my-score">0</span></div>
+            <div class="status-orange" id="opp-display">OPP: <span id="opp-score">0</span></div>
         </div>
-
-        <table>
-            <thead><tr><th>Player</th><th>Spin</th><th>Points</th></tr></thead>
-            <tbody id="history-body"></tbody>
-        </table>
+        <table><thead><tr><th>Round</th><th>Player</th><th>Spin</th><th>Points</th></tr></thead><tbody id="history-body"></tbody></table>
     </div>
 
     <div class="leaderboard" id="lead"></div>
 </div>
 
 <script>
-    let matchId = null;
-    let poll = null;
+let gamePoll = null;
+let isInBattle = false;
+let lastTimeLeft = 30;
 
-    async function auth(type) {
-        const username = document.getElementById('u').value;
-        const password = document.getElementById('p').value;
+async function auth(type) {
+    try {
         const res = await fetch(`/api/auth/${type}`, {
             method: 'POST', headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({username, password})
+            body: JSON.stringify({username: document.getElementById('u').value, password: document.getElementById('p').value})
         });
         const data = await res.json();
-        if (data.user) location.reload(); else alert(data.error);
+        if (data.user) location.reload();
+        else alert(data.error);
+    } catch(e) { alert('Connection error'); }
+}
+
+window.onload = async () => {
+    const res = await fetch('/api/auth/check');
+    const data = await res.json();
+    if (data.logged_in) {
+        document.getElementById('auth').style.display = 'none';
+        document.getElementById('game').style.display = 'block';
+        document.getElementById('name-tag').innerText = `Player: ${data.user.username}`;
+        document.getElementById('bal-tag').innerText = `Balance: ${data.user.balance}`;
+        loadLead();
+        setInterval(loadLead, 10000);
+        startGamePolling();
     }
+};
 
-    window.onload = async () => {
-        const res = await fetch('/api/auth/check');
-        const data = await res.json();
-        if (data.logged_in) {
-            document.getElementById('auth').style.display = 'none';
-            document.getElementById('game').style.display = 'block';
-            document.getElementById('name-tag').innerText = "Player: " + data.user.username;
-            document.getElementById('bal-tag').innerText = "Balance: " + data.user.balance;
-            loadLead();
-        }
-    };
-
-    async function joinMatch() {
-        document.getElementById('status-msg').innerText = "Searching for opponent...";
-        const res = await fetch('/api/match/join', {method: 'POST'});
-        const data = await res.json();
-        if (data.match_id) startBattle(data.match_id);
-        else poll = setInterval(async () => {
-            const r = await fetch('/api/match/join', {method: 'POST'});
-            const d = await r.json();
-            if (d.match_id) { clearInterval(poll); startBattle(d.match_id); }
-        }, 2000);
+function updateTimer(timeLeft) {
+    const timerEl = document.getElementById('timer');
+    const seconds = Math.max(0, Math.ceil(timeLeft));
+    
+    timerEl.innerText = seconds;
+    
+    // 🆕 COLOR CODING + ANIMATION
+    if (seconds > 10) {
+        timerEl.className = 'timer safe';
+    } else if (seconds > 5) {
+        timerEl.className = 'timer warning';
+    } else if (seconds > 0) {
+        timerEl.className = 'timer danger';
+    } else {
+        timerEl.innerText = '⏰';
+        timerEl.className = 'timer danger';
     }
+}
 
-    function startBattle(id) {
-        matchId = id;
-        document.getElementById('joinBtn').style.display = 'none';
-        document.getElementById('spinBtn').style.display = 'inline-block';
-        document.getElementById('battle-stats').style.display = 'block';
-        
-        poll = setInterval(async () => {
-            const res = await fetch(`/api/match/${matchId}/status`);
+function startGamePolling() {
+    gamePoll = setInterval(async () => {
+        try {
+            const res = await fetch('/api/game/status');
             const data = await res.json();
             
-            document.getElementById('my-score').innerText = data.my_score;
-            document.getElementById('opp-score').innerText = data.opp_score;
-            document.getElementById('opp-name').innerText = data.opp_name;
-            
-            // Update History Table
-            document.getElementById('history-body').innerHTML = data.history.map(h => 
-                `<tr><td>${h.player}</td><td>${h.reels.join('')}</td><td>+${h.points}</td></tr>`
-            ).reverse().join('');
-
-            if (data.status === 'finished') {
-                document.getElementById('status-msg').innerText = "🏁 WINNER: " + data.winner;
-                document.getElementById('spinBtn').disabled = true;
-                clearInterval(poll);
-                setTimeout(() => location.reload(), 5000);
-            } else {
-                document.getElementById('status-msg').innerText = data.is_my_turn ? "🔥 YOUR TURN!" : "⌛ OPPONENT IS SPINNING...";
-                document.getElementById('spinBtn').disabled = !data.is_my_turn;
-                if(data.is_my_turn) document.getElementById('game').classList.add('my-turn');
-                else document.getElementById('game').classList.remove('my-turn');
+            if (data.in_match && !isInBattle) {
+                document.getElementById('joinBtn').style.display = 'none';
+                document.getElementById('spinBtn').style.display = 'inline-block';
+                document.getElementById('battle-stats').style.display = 'block';
+                document.getElementById('round-info').style.display = 'block';
+                isInBattle = true;
             }
-        }, 1500);
-    }
+            
+            if (data.in_match) {
+                // 🆕 UPDATE SCORES
+                document.getElementById('my-score').innerText = data.my_score;
+                document.getElementById('opp-score').innerText = data.opp_score;
+                document.getElementById('opp-display').innerHTML = `OPP (<span class="opp-connected">${data.opp_name}</span>): ${data.opp_score}`;
+                
+                // 🆕 ROUND & SPIN
+                document.getElementById('current-round').innerText = data.round;
+                document.getElementById('current-spin').innerText = data.spin;
+                
+                // 🆕 REAL-TIME COUNTDOWN
+                updateTimer(data.time_left);
+                
+                // 🆕 SPINNER UPDATE
+                if (data.last_spin) {
+                    document.getElementById('r1').innerText = data.last_spin[0];
+                    document.getElementById('r2').innerText = data.last_spin[1];
+                    document.getElementById('r3').innerText = data.last_spin[2];
+                }
+                
+                // 🆕 HISTORY TABLE
+                document.getElementById('history-body').innerHTML = data.history.map(h => 
+                    `<tr><td>${h.round}</td><td>${h.player}</td><td>${h.reels.join(' | ')}</td><td>${h.points >= 0 ? '+'+h.points : h.points}</td></tr>`
+                ).reverse().join('');
+                
+                // 🆕 GAME STATE
+                if (data.status === 'finished') {
+                    document.getElementById('status-msg').innerHTML = `🏆 WINNER: ${data.winner}!`;
+                    document.getElementById('spinBtn').disabled = true;
+                    clearInterval(gamePoll);
+                } else {
+                    document.getElementById('status-msg').innerHTML = 
+                        data.timeout_penalty ? '⏰ TIMEOUT! -1 POINTS!' :
+                        data.is_my_turn ? '🔥 YOUR TURN! SPIN WITHIN TIME!' : `⌛ ${data.opp_name}'s turn...`;
+                    document.getElementById('spinBtn').disabled = !data.is_my_turn || data.timeout_penalty;
+                }
+            }
+        } catch(e) {
+            console.log('Polling error:', e);
+        }
+    }, 1000);  // Every SECOND for smooth countdown
+}
 
-    async function spin() {
-        const res = await fetch(`/api/match/${matchId}/spin`, {method: 'POST'});
+async function joinMatch() {
+    document.getElementById('status-msg').innerText = '🔍 Finding opponent... Queue: 1/2';
+    document.getElementById('joinBtn').disabled = true;
+    try {
+        const res = await fetch('/api/match/join', {method: 'POST'});
         const data = await res.json();
-        document.getElementById('r1').innerText = data.reels[0];
-        document.getElementById('r2').innerText = data.reels[1];
-        document.getElementById('r3').innerText = data.reels[2];
+    } catch(e) {
+        document.getElementById('joinBtn').disabled = false;
     }
+}
 
-    async function loadLead() {
+async function spin() {
+    document.getElementById('spinBtn').disabled = true;
+    document.getElementById('status-msg').innerText = '🎰 SPINNING...';
+    try {
+        const res = await fetch('/api/game/spin', {method: 'POST'});
+        const data = await res.json();
+        // Timer resets automatically via polling
+    } catch(e) {
+        document.getElementById('spinBtn').disabled = false;
+        document.getElementById('status-msg').innerText = 'Spin failed! Try again.';
+    }
+}
+
+async function loadLead() {
+    try {
         const res = await fetch('/api/leaderboard');
         const data = await res.json();
-        document.getElementById('lead').innerHTML = "<b>Global Ranking:</b> " + data.map(i => `${i.u}(${i.b})`).join(' | ');
-    }
+        document.getElementById('lead').innerHTML = '🏆 TOP 5: ' + data.map(i => `${i.u}(${i.b})`).join(' | ');
+    } catch(e) {}
+}
 
-    function logout() { fetch('/api/auth/logout', {method: 'POST'}).then(() => location.reload()); }
+function logout() { 
+    fetch('/api/auth/logout', {method: 'POST'}).then(() => location.reload()); 
+}
 </script>
 </body>
 </html>
